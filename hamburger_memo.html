@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ハンバーガー味わいメモ</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: inline-block;
+            width: 100px;
+        }
+        input[type="text"], input[type="number"], input[type="date"] {
+            width: calc(100% - 110px);
+        }
+        #bite-count {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+        #memo, #summary {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+        #taste-inputs {
+            margin-bottom: 10px;
+        }
+        #photo-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #photo-preview img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <h1>ハンバーガー味わいメモ</h1>
+    <div id="initial-info">
+        <div class="input-group">
+            <label for="date">日付:</label>
+            <input type="date" id="date" required>
+        </div>
+        <div class="input-group">
+            <label for="shop-name">店名:</label>
+            <input type="text" id="shop-name" required>
+        </div>
+        <div class="input-group">
+            <label for="location">場所:</label>
+            <input type="text" id="location" required>
+        </div>
+        <div class="input-group">
+            <label for="menu-name">メニュー名:</label>
+            <input type="text" id="menu-name" required>
+        </div>
+        <div class="input-group">
+            <label for="price">価格:</label>
+            <input type="number" id="price" required>
+        </div>
+        <div class="input-group">
+            <label for="photos">写真:</label>
+            <input type="file" id="photos" accept="image/*" multiple>
+        </div>
+        <div id="photo-preview"></div>
+        <button id="start-eating">食事開始</button>
+    </div>
+    <div id="taste-recorder" style="display:none;">
+        <div id="bite-count">1口目</div>
+        <div id="taste-inputs">
+            <select id="ingredient">
+                <option value="">具材を選択</option>
+                <option value="全体">全体</option>
+                <option value="バンズ">バンズ</option>
+                <option value="パティ">パティ</option>
+                <option value="チーズ">チーズ</option>
+                <option value="レタス">レタス</option>
+                <option value="トマト">トマト</option>
+                <option value="オニオン">オニオン</option>
+                <option value="ピクルス">ピクルス</option>
+                <option value="ベーコン">ベーコン</option>
+                <option value="ソース">ソース</option>
+            </select>
+            <select id="taste">
+                <option value="">味わいを選択</option>
+                <option value="うまっ">うまっ</option>
+                <option value="ジューシー">ジューシー</option>
+                <option value="カリカリ">カリカリ</option>
+                <option value="サクサク">サクサク</option>
+                <option value="フワフワ">フワフワ</option>
+                <option value="甘い">甘い</option>
+                <option value="しょっぱい">しょっぱい</option>
+                <option value="辛い">辛い</option>
+                <option value="酸っぱい">酸っぱい</option>
+                <option value="濃厚">濃厚</option>
+                <option value="あっさり">あっさり</option>
+            </select>
+            <button id="add-taste">追加</button>
+        </div>
+        <input type="text" id="custom-taste" placeholder="自由記述">
+        <div id="current-tastes"></div>
+        <button id="next-bite">次の一口へ</button>
+        <button id="finish">最後の一口（完食）</button>
+    </div>
+    <h2>味わいメモ</h2>
+    <div id="memo"></div>
+    <h2>集計結果</h2>
+    <div id="summary"></div>
+
+    <script>
+        let biteCount = 1;
+        let tasteData = {};
+        let currentTastes = [];
+        let uploadedPhotos = [];
+
+        document.getElementById('photos').addEventListener('change', function(event) {
+            const files = event.target.files;
+            const preview = document.getElementById('photo-preview');
+            preview.innerHTML = '';
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    preview.appendChild(img);
+                    uploadedPhotos.push(e.target.result);
+                }
+
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('start-eating').addEventListener('click', function() {
+            const date = document.getElementById('date').value;
+            const shopName = document.getElementById('shop-name').value;
+            const location = document.getElementById('location').value;
+            const menuName = document.getElementById('menu-name').value;
+            const price = document.getElementById('price').value;
+
+            if (date && shopName && location && menuName && price) {
+                document.getElementById('initial-info').style.display = 'none';
+                document.getElementById('taste-recorder').style.display = 'block';
+                document.getElementById('memo').innerHTML = `日付: ${date}<br>店名: ${shopName}<br>場所: ${location}<br>メニュー名: ${menuName}<br>価格: ${price}円<br><br>`;
+                
+                // 写真のプレビューを味わいメモに追加
+                const photoPreview = document.getElementById('photo-preview');
+                document.getElementById('memo').appendChild(photoPreview.cloneNode(true));
+            } else {
+                alert('すべての項目を入力してください。');
+            }
+        });
+
+        document.getElementById('add-taste').addEventListener('click', function() {
+            const ingredient = document.getElementById('ingredient').value;
+            const taste = document.getElementById('taste').value;
+            if (ingredient && taste) {
+                currentTastes.push(`${ingredient}:${taste}`);
+                updateCurrentTastes();
+            }
+        });
+
+        function updateCurrentTastes() {
+            const currentTastesDiv = document.getElementById('current-tastes');
+            currentTastesDiv.innerHTML = currentTastes.join(', ');
+        }
+
+        function updateMemo(isLast = false) {
+            const memoDiv = document.getElementById('memo');
+            const customTaste = document.getElementById('custom-taste').value;
+            let memoText = `${biteCount}口目${isLast ? '（最後）' : ''}: `;
+
+            if (currentTastes.length > 0) {
+                memoText += currentTastes.join(', ');
+                currentTastes.forEach(taste => {
+                    tasteData[taste] = (tasteData[taste] || 0) + 1;
+                });
+            }
+
+            if (customTaste) {
+                memoText += customTaste ? (currentTastes.length > 0 ? ', ' : '') + customTaste : '';
+                tasteData[customTaste] = (tasteData[customTaste] || 0) + 1;
+            }
+
+            if (currentTastes.length === 0 && !customTaste) {
+                memoText += "特に特徴なし";
+            }
+
+            memoDiv.innerHTML += memoText + '<br>';
+
+            // リセット
+            currentTastes = [];
+            document.getElementById('current-tastes').innerHTML = '';
+            document.getElementById('custom-taste').value = '';
+
+            // 口数をカウントアップ
+            biteCount++;
+            document.getElementById('bite-count').textContent = `${biteCount}口目`;
+
+            if (isLast) {
+                finishEating();
+            }
+        }
+
+        function finishEating() {
+            document.getElementById('next-bite').disabled = true;
+            document.getElementById('finish').disabled = true;
+            document.getElementById('bite-count').textContent = "完食！";
+
+            // 集計結果を表示
+            const summaryDiv = document.getElementById('summary');
+            let summaryText = "味わいの出現回数:<br>";
+            for (let taste in tasteData) {
+                summaryText += `${taste}: ${tasteData[taste]}回<br>`;
+            }
+            summaryDiv.innerHTML = summaryText;
+
+            // LocalStorageにデータを保存
+            let allData = JSON.parse(localStorage.getItem('hamburgerTasteData')) || [];
+            allData.push({
+                date: document.getElementById('date').value,
+                shopName: document.getElementById('shop-name').value,
+                location: document.getElementById('location').value,
+                menuName: document.getElementById('menu-name').value,
+                price: document.getElementById('price').value,
+                bites: biteCount - 1,
+                tastes: tasteData,
+                photos: uploadedPhotos
+            });
+            localStorage.setItem('hamburgerTasteData', JSON.stringify(allData));
+        }
+
+        document.getElementById('next-bite').addEventListener('click', function() {
+            updateMemo();
+        });
+
+        document.getElementById('finish').addEventListener('click', function() {
+            updateMemo(true);
+        });
+    </script>
+</body>
+</html>
